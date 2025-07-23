@@ -1,31 +1,8 @@
-# Archivos de construcción y dependencias
-/target/
-/build/
 HELP.md
+target/
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
-
-
-# Configuración de entorno
-*.env
-application.properties
-application.yml
-
-# Archivos de sistema y temporales
-.idea/
-*.log
-*.class
-.DS_Store
-
-# Sistema operativo
-Thumbs.db
-*.swp
-
-# Archivos de Maven y Gradle
-.mvn/
-!/.mvn/wrapper/maven-wrapper.jar
-**/logs/
 
 ### STS ###
 .apt_generated
