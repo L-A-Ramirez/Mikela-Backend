@@ -182,7 +182,6 @@ public class VentaController {
     }
 
 
-
     @GetMapping("/detalladas")
     @PreAuthorize("isAuthenticated()")
     public List<VentaDTO> getVentasDetalladas(
@@ -211,6 +210,5 @@ public class VentaController {
         return ventaDTO.map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
-
 
 }

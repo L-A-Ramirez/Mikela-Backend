@@ -10,6 +10,7 @@ import java.util.stream.Collectors;
 @Getter
 @Setter
 public class VentaDTO {
+    private Long id;
     private String fecha;
     private String pago;
     private Double total;
@@ -17,6 +18,7 @@ public class VentaDTO {
     private List<DetalleVentaVistaDTO> detalles;
 
     public VentaDTO(Venta venta) {
+        this.id = venta.getId();
         this.fecha = venta.getFecha().toString();
         this.pago = venta.getPago().toString();
         this.total = venta.getTotal();

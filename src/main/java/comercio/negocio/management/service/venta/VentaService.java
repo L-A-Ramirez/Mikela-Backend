@@ -7,6 +7,7 @@ import comercio.negocio.management.entities.dto.VentaDTO;
 import comercio.negocio.management.repositories.VentaRepository;
 import com.lowagie.text.*;
 import com.lowagie.text.pdf.*;
+import org.jetbrains.annotations.NotNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -52,34 +53,41 @@ public class VentaService implements I_VentaService {
     }
 
     @Override
-    public ByteArrayOutputStream generarCierreDelDiaPDF(LocalDate fecha, Long negocioId) throws Exception {
+    public ByteArrayOutputStream generarCierreDelDiaPDF(@NotNull LocalDate fecha, Long negocioId) throws Exception {
         Timestamp inicio = Timestamp.valueOf(fecha.atStartOfDay());
         Timestamp fin = Timestamp.valueOf(fecha.plusDays(1).atStartOfDay());
 
         List<Venta> ventas = ventaRepository.findByFechaAndNegocioId(inicio, fin, negocioId);
         double total = ventas.stream().mapToDouble(v -> v.getTotal() != null ? v.getTotal() : 0).sum();
 
-        // Agrupar ventas por nombre de cliente (o "Cliente N/A")
         Map<String, List<Venta>> ventasPorCliente = ventas.stream()
-                .collect(Collectors.groupingBy(v -> v.getCliente() != null ? v.getCliente().getNombre() : "Cliente N/A"));
+                .collect(Collectors.groupingBy(v -> v.getCliente() != null ? v.getCliente().getNombre() : "N/A"));
 
         Document document = new Document();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         PdfWriter.getInstance(document, out);
         document.open();
 
-        document.add(new Paragraph("🧾 Cierre de Caja - " + fecha));
-        document.add(new Paragraph("Total ventas: $" + total));
+        // Título
+        Paragraph titulo = new Paragraph("🧾 Cierre de Caja - " + fecha);
+        titulo.setAlignment(Element.ALIGN_CENTER);
+        titulo.setFont(FontFactory.getFont(FontFactory.HELVETICA_BOLD, 16));
+        document.add(titulo);
+        document.add(new Paragraph(" "));
+
+        // Total general
+        Paragraph totalParrafo = new Paragraph(String.format("💵 Total de ventas: $%.2f", total));
+        totalParrafo.setAlignment(Element.ALIGN_RIGHT);
+        document.add(totalParrafo);
         document.add(new Paragraph(" "));
 
         for (Map.Entry<String, List<Venta>> entry : ventasPorCliente.entrySet()) {
             String clienteNombre = entry.getKey();
             List<Venta> ventasCliente = entry.getValue();
+            double subtotalCliente = 0.0;
 
             document.add(new Paragraph("👤 Cliente: " + clienteNombre));
             document.add(new Paragraph(" "));
-
-            double subtotalCliente = 0.0;
 
             for (Venta v : ventasCliente) {
                 String fechaVenta = v.getFecha() != null ? v.getFecha().toString() : "Sin fecha";
@@ -91,32 +99,24 @@ public class VentaService implements I_VentaService {
                         double precio = detalle.getProducto() != null ? detalle.getProducto().getPrecio() : 0.0;
                         double cantidad = detalle.getCantidad();
                         double subtotal = precio * cantidad;
-
                         subtotalCliente += subtotal;
 
                         document.add(new Paragraph(
-                                fechaVenta + "\n" +
-                                        producto +
-                                        " - Precio: $" + precio +
-                                        " - Cantidad: " + cantidad +
-                                        " - Subtotal: $" + subtotal +
-                                        " - Pago: " + formaPago + "\n" +
-                                        "...................................................."
+                                "- " + producto +
+                                        " | Precio: $" + String.format("%.2f", precio) +
+                                        " | Cantidad: " + cantidad +
+                                        " | Subtotal: $" + String.format("%.2f", subtotal)
                         ));
                     }
                 } else {
-                    document.add(new Paragraph(
-                            fechaVenta + "\n" +
-                                    "Sin productos - Pago: " + formaPago + "\n" +
-                                    "...................................................."
-                    ));
+                    document.add(new Paragraph("- Sin productos"));
                 }
 
-                document.add(new Paragraph(" "));
+                document.add(new Paragraph("🕒 Fecha: " + fechaVenta + " | 💳 Pago: " + formaPago));
+                document.add(new Paragraph("--------------------------------------------------"));
             }
 
-            // Subtotal por cliente
-            document.add(new Paragraph("💰 Subtotal Cliente: $" + subtotalCliente));
+            document.add(new Paragraph("💰 Subtotal: $" + String.format("%.2f", subtotalCliente)));
             document.add(new Paragraph("=================================================="));
             document.add(new Paragraph(" "));
         }
@@ -134,7 +134,9 @@ public class VentaService implements I_VentaService {
                 desde.atStartOfDay(), hasta.atTime(23, 59, 59), negocioId
         );
 
-        double totalGeneral = ventas.stream().mapToDouble(v -> v.getTotal() != null ? v.getTotal() : 0).sum();
+        double totalGeneral = ventas.stream()
+                .mapToDouble(v -> v.getTotal() != null ? v.getTotal() : 0)
+                .sum();
 
         // Agrupar ventas por cliente
         Map<String, List<Venta>> ventasPorCliente = ventas.stream()
@@ -152,10 +154,14 @@ public class VentaService implements I_VentaService {
         for (Map.Entry<String, List<Venta>> entry : ventasPorCliente.entrySet()) {
             String clienteNombre = entry.getKey();
             List<Venta> ventasCliente = entry.getValue();
-            double totalCliente = ventasCliente.stream().mapToDouble(v -> v.getTotal() != null ? v.getTotal() : 0).sum();
 
             document.add(new Paragraph("Cliente: " + clienteNombre));
-            document.add(new Paragraph("Total: $" + totalCliente));
+
+            double totalCliente = ventasCliente.stream()
+                    .mapToDouble(v -> v.getTotal() != null ? v.getTotal() : 0)
+                    .sum();
+
+            document.add(new Paragraph("Total del cliente: $" + totalCliente));
             document.add(new Paragraph("------------------------------------------"));
 
             for (Venta v : ventasCliente) {
