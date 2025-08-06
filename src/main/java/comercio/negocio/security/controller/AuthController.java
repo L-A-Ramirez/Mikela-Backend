@@ -231,7 +231,7 @@ public class AuthController {
         usuario.setTokenExpiracion(LocalDateTime.now().plusMinutes(30));
         usuarioService.saveUser(usuario);
 
-        String resetLink = "http://localhost:4200/resetear-contrasena?token=" + token;
+        String resetLink = "https://mikela-app.web.app/resetear-contrasena?token=" + token;
         emailService.enviarEmail(usuario.getEmail(), "Recuperación de contraseña",
                 "Hacé clic en el siguiente enlace para recuperar tu contraseña: " + resetLink);
 
