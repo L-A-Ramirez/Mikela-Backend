@@ -39,7 +39,7 @@ public class UsuarioService {
     }
 
     // Buscar usuario por email
-    public Optional<Usuario> obtenerUsuarioPorEmail(String email) {
+    public Optional<Usuario> getByEmail(String email) {
         return usuarioRepository.findByEmail(email);
     }
 
@@ -61,5 +61,14 @@ public class UsuarioService {
     // Verificar existencia por nombreUsuario
     public boolean existsByNombreUsuario(String nombreUsuario) {
         return usuarioRepository.existsByNombreUsuario(nombreUsuario);
+    }
+
+    public Optional<Usuario> getByTokenRecuperacion(String token) {
+        return usuarioRepository.findByTokenRecuperacion(token);
+    }
+
+    // Buscar usuario por email o nombre de usuario
+    public Optional<Usuario> getByEmailOrNombreUsuario(String emailOrUsername) {
+        return usuarioRepository.findByEmailOrNombreUsuario(emailOrUsername, emailOrUsername);
     }
 }

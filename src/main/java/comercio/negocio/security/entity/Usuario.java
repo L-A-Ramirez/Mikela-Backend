@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 @Getter
@@ -35,13 +36,15 @@ public class Usuario {
     @JoinColumn(name = "negocio_id", nullable = true)
     private Negocio negocio;
 
+    private String tokenRecuperacion;
+    private LocalDateTime tokenExpiracion;
+
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
             name = "usuarios_rol",
             joinColumns = @JoinColumn(name = "usuario_id"),
             inverseJoinColumns = @JoinColumn(name = "rol_id")
     )
-
     private Set<Rol> roles;
 
     public Set<Rol> getRoles() {
@@ -107,5 +110,21 @@ public class Usuario {
 
     public void setNegocio(Negocio negocio) {
         this.negocio = negocio;
+    }
+
+    public String getTokenRecuperacion() {
+        return tokenRecuperacion;
+    }
+
+    public void setTokenRecuperacion(String tokenRecuperacion) {
+        this.tokenRecuperacion = tokenRecuperacion;
+    }
+
+    public LocalDateTime getTokenExpiracion() {
+        return tokenExpiracion;
+    }
+
+    public void setTokenExpiracion(LocalDateTime tokenExpiracion) {
+        this.tokenExpiracion = tokenExpiracion;
     }
 }

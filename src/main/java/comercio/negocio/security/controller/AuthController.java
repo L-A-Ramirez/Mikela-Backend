@@ -8,6 +8,7 @@ import comercio.negocio.security.entity.Rol;
 import comercio.negocio.security.entity.Usuario;
 import comercio.negocio.security.enums.RolNombre;
 import comercio.negocio.security.jwt.JwtProvider;
+import comercio.negocio.security.service.EmailService;
 import comercio.negocio.security.service.RolService;
 import comercio.negocio.security.service.UsuarioService;
 import comercio.negocio.management.service.negocio.NegocioService;
@@ -28,8 +29,8 @@ import mi.porfolio.security.controller.Mensaje;
 import org.slf4j.Logger;
 
 import java.sql.Timestamp;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @RestController
@@ -55,6 +56,9 @@ public class AuthController {
 
     @Autowired
     private JwtProvider jwtProvider;
+
+    @Autowired
+    private EmailService emailService;
 
 
     @PostMapping("/create")
@@ -158,6 +162,80 @@ public class AuthController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Error al procesar la venta: " + e.getMessage());
         }
 
+    }
+
+    @PostMapping("/password-reset")
+    public ResponseEntity<?> resetearContrasena(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        String nuevaPassword = request.get("password");
+
+        Usuario usuario = usuarioService.getByTokenRecuperacion(token)
+                .orElse(null);
+
+        if (usuario == null) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(new Mensaje("Token inválido"));
+        }
+
+
+        if (usuario.getTokenExpiracion().isBefore(LocalDateTime.now())) {
+            return ResponseEntity
+                    .status(HttpStatus.BAD_REQUEST)
+                    .body(new Mensaje("El token ha expirado"));
+        }
+
+        usuario.setPassword(passwordEncoder.encode(nuevaPassword));
+        usuario.setTokenRecuperacion(null);
+        usuario.setTokenExpiracion(null);
+        usuarioService.saveUser(usuario);
+
+        return new ResponseEntity<>(new Mensaje("Contraseña restablecida correctamente"), HttpStatus.OK);
+    }
+
+    @GetMapping("/password-reset/validate")
+    public ResponseEntity<?> validarTokenRecuperacion(@RequestParam("token") String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(new Mensaje("Token inválido"));
+        }
+
+        Optional<Usuario> usuarioOpt = usuarioService.getByTokenRecuperacion(token);
+        if (!usuarioOpt.isPresent()) {
+            return ResponseEntity.badRequest().body(new Mensaje("Token inválido"));
+        }
+
+        Usuario usuario = usuarioOpt.get();
+
+        if (usuario.getTokenExpiracion() == null || usuario.getTokenExpiracion().isBefore(LocalDateTime.now())) {
+            return ResponseEntity.badRequest().body(new Mensaje("El token ha expirado"));
+        }
+
+        return ResponseEntity.ok(new Mensaje("Token válido"));
+    }
+
+
+    @PostMapping("/password-reset-request")
+    public ResponseEntity<?> solicitarResetPassword(@RequestBody Map<String, String> request) {
+        String emailOrUsername = request.get("emailOrUsername");
+
+        Optional<Usuario> usuarioOpt = usuarioService.getByEmailOrNombreUsuario(emailOrUsername);
+        if (!usuarioOpt.isPresent()) {
+            // No informar si existe o no
+            return ResponseEntity.ok(new Mensaje("Si el usuario existe, se ha enviado un email"));
+        }
+
+        Usuario usuario = usuarioOpt.get();
+
+        String token = UUID.randomUUID().toString();
+        usuario.setTokenRecuperacion(token);
+        usuario.setTokenExpiracion(LocalDateTime.now().plusMinutes(30));
+        usuarioService.saveUser(usuario);
+
+        String resetLink = "http://localhost:4200/resetear-contrasena?token=" + token;
+        emailService.enviarEmail(usuario.getEmail(), "Recuperación de contraseña",
+                "Hacé clic en el siguiente enlace para recuperar tu contraseña: " + resetLink);
+
+        return ResponseEntity.ok(new Mensaje("Si el usuario existe, se ha enviado un email"));
     }
 
 }

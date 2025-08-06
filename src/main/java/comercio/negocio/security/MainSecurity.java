@@ -17,9 +17,9 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import static org.springframework.security.config.Customizer.withDefaults;
+
 
 @Configuration
 @EnableWebSecurity
@@ -31,9 +31,6 @@ public class MainSecurity {
 
     @Autowired
     private JwtEntryPoint jwtEntryPoint;
-
-    @Autowired
-    private CorsConfigurationSource corsConfigurationSource;
 
     @Bean
     public JwtTokenFilter jwtTokenFilter() {
@@ -53,25 +50,15 @@ public class MainSecurity {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
-                .cors(cors -> cors.configurationSource(corsConfigurationSource))
+                .cors(withDefaults())
                 .exceptionHandling(exception -> exception.authenticationEntryPoint(jwtEntryPoint))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorize -> authorize
-                        .requestMatchers("/api/negocios/create", "/api/auth/create", "/api/auth/login").permitAll() // Permitir acceso sin autenticación
-                        .anyRequest().authenticated()) // Todas las demás rutas requieren autenticación
-                .addFilterBefore(jwtTokenFilter(), UsernamePasswordAuthenticationFilter.class); // Agregar el filtro JWT
+                        .requestMatchers("/api/negocios/create", "/api/auth/create", "/api/auth/login", "/api/auth/password-reset-request", "/api/auth/**").permitAll()
+                        .anyRequest().authenticated())
+                .addFilterBefore(jwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    @Configuration
-    static class WebConfig implements WebMvcConfigurer {
-        @Override
-        public void addCorsMappings(CorsRegistry registry) {
-            registry.addMapping("/**")
-                    .allowedOrigins("http://localhost:4200") // Cambia según tu frontend
-                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-                    .allowedHeaders("*");
-        }
-    }
 }
